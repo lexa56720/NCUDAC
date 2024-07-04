@@ -1,4 +1,4 @@
-
+п»ї
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <stdio.h>
@@ -41,7 +41,7 @@ void MultiplyCuda(int rowsA, int columnsA, int columnsB, float* matrixA, float* 
 {
 	float alpha = scalar;
 	float beta = 0.0f;
-	// Запуск видеокарты с одним потоком для каждого элемента.
+	// Р—Р°РїСѓСЃРє РІРёРґРµРѕРєР°СЂС‚С‹ СЃ РѕРґРЅРёРј РїРѕС‚РѕРєРѕРј РґР»СЏ РєР°Р¶РґРѕРіРѕ СЌР»РµРјРµРЅС‚Р°.
 	cublasSgemm(handle, OpA, OpB,
 		columnsB, rowsA, columnsA,
 		&alpha,
@@ -50,7 +50,7 @@ void MultiplyCuda(int rowsA, int columnsA, int columnsB, float* matrixA, float* 
 		&beta,
 		result, columnsB);
 
-	// Ожидание конца вычислений
+	// РћР¶РёРґР°РЅРёРµ РєРѕРЅС†Р° РІС‹С‡РёСЃР»РµРЅРёР№
 	cudaDeviceSynchronize();
 }
 
@@ -157,7 +157,7 @@ extern "C"
 		GetThreadAndBlocks(count, &threads, &blocks);
 		MultiplyScalarKernel << <blocks, threads >> > (result, matrix, scalar, count);
 
-		// Ожидание конца вычислений
+		// РћР¶РёРґР°РЅРёРµ РєРѕРЅС†Р° РІС‹С‡РёСЃР»РµРЅРёР№
 		cudaDeviceSynchronize();
 	}
 
@@ -171,7 +171,7 @@ extern "C"
 	}
 	void MultiplyAndActivateCublas(int rows, int columns, float* matrix, float* vector, float* result, cublasHandle_t handler)
 	{
-		//Определение количества потоков и блоков
+		//РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕР»РёС‡РµСЃС‚РІР° РїРѕС‚РѕРєРѕРІ Рё Р±Р»РѕРєРѕРІ
 		int blocks, threads;
 		GetThreadAndBlocks(rows, &threads, &blocks);
 		float alpha = 1.0f;
@@ -179,12 +179,12 @@ extern "C"
 
 		cublasSgemv(handler, CUBLAS_OP_T, columns, rows, &alpha, matrix, columns, vector, 1, &beta, result, 1);
 
-		// Ожидание конца вычислений
+		// РћР¶РёРґР°РЅРёРµ РєРѕРЅС†Р° РІС‹С‡РёСЃР»РµРЅРёР№
 		cudaDeviceSynchronize();
-		// Запуск видеокарты с одним потоком для каждого элемента.
+		// Р—Р°РїСѓСЃРє РІРёРґРµРѕРєР°СЂС‚С‹ СЃ РѕРґРЅРёРј РїРѕС‚РѕРєРѕРј РґР»СЏ РєР°Р¶РґРѕРіРѕ СЌР»РµРјРµРЅС‚Р°.
 		ActivateKernel << <blocks, threads >> > (result, rows);
 
-		// Ожидание конца вычислений
+		// РћР¶РёРґР°РЅРёРµ РєРѕРЅС†Р° РІС‹С‡РёСЃР»РµРЅРёР№
 		cudaDeviceSynchronize();
 	}
 
@@ -202,7 +202,7 @@ extern "C"
 		GetThreadAndBlocks(count, &threads, &blocks);
 		SubstractKernel << <blocks, threads >> > (a, b, result, count);
 
-		// Ожидание конца вычислений
+		// РћР¶РёРґР°РЅРёРµ РєРѕРЅС†Р° РІС‹С‡РёСЃР»РµРЅРёР№
 		cudaDeviceSynchronize();
 	}
 
@@ -220,7 +220,7 @@ extern "C"
 		GetThreadAndBlocks(count, &threads, &blocks);
 		AddKernel << <blocks, threads >> > (a, b, result, count);
 
-		// Ожидание конца вычислений
+		// РћР¶РёРґР°РЅРёРµ РєРѕРЅС†Р° РІС‹С‡РёСЃР»РµРЅРёР№
 		cudaDeviceSynchronize();
 	}
 
@@ -238,7 +238,7 @@ extern "C"
 		GetThreadAndBlocks(count, &threads, &blocks);
 		DeActivateKernel << <blocks, threads >> > (neuronsOutput, result, count);
 
-		// Ожидание конца вычислений
+		// РћР¶РёРґР°РЅРёРµ РєРѕРЅС†Р° РІС‹С‡РёСЃР»РµРЅРёР№
 		cudaDeviceSynchronize();
 	}
 
@@ -257,7 +257,7 @@ extern "C"
 		GetThreadAndBlocks(count, &threads, &blocks);
 		HadamardProductKernel << <blocks, threads >> > (a, b, result, count);
 
-		// Ожидание конца вычислений
+		// РћР¶РёРґР°РЅРёРµ РєРѕРЅС†Р° РІС‹С‡РёСЃР»РµРЅРёР№
 		cudaDeviceSynchronize();
 	}
 
@@ -279,7 +279,7 @@ extern "C"
 
 		TransposeKernel << <blocks, threads >> > (matrix, rows, columns, count, result);
 
-		// Ожидание конца вычислений
+		// РћР¶РёРґР°РЅРёРµ РєРѕРЅС†Р° РІС‹С‡РёСЃР»РµРЅРёР№
 		cudaDeviceSynchronize();
 	}
 
@@ -297,7 +297,7 @@ extern "C"
 		GetThreadAndBlocks(count, &threads, &blocks);
 		MemsetKernel << <blocks, threads >> > (array, value, count);
 
-		// Ожидание конца вычислений
+		// РћР¶РёРґР°РЅРёРµ РєРѕРЅС†Р° РІС‹С‡РёСЃР»РµРЅРёР№
 		cudaDeviceSynchronize();
 	}
 
@@ -319,7 +319,7 @@ extern "C"
 		GetThreadAndBlocks(rows, &threads, &blocks);
 		SumToSingleColumnKernel << <blocks, threads >> > (matrix, columns, rows, result);
 
-		// Ожидание конца вычислений
+		// РћР¶РёРґР°РЅРёРµ РєРѕРЅС†Р° РІС‹С‡РёСЃР»РµРЅРёР№
 		cudaDeviceSynchronize();
 	}
 	void SumToSingleColumn(float* matrix, int rows, int columns, float* result)
@@ -330,7 +330,7 @@ extern "C"
 				result[i] += matrix[i * columns + j];
 			}
 
-		// Ожидание конца вычислений
+		// РћР¶РёРґР°РЅРёРµ РєРѕРЅС†Р° РІС‹С‡РёСЃР»РµРЅРёР№
 		cudaDeviceSynchronize();
 	}
 
@@ -361,17 +361,17 @@ extern "C"
 
 		int maxLayerWeight = GetMaxWeightCount(neurons, *layerCount) * sizeof(float);
 
-		// Выделение памяти и инициализация данных
-		cudaMalloc((void**)&data->deviceIdeal, data->inputSizeTotal); //Массив идеальных значений
-		cudaMalloc((void**)&data->deviceResult, data->resultSizeTotal); //Массив входных данных
-		cudaMalloc((void**)&data->deviceWeights, data->weightsSizeTotal); //Массив всех весов
-		cudaMalloc((void**)&data->deltas, data->neuronsSizeTotal); //Массив всех весов
+		// Р’С‹РґРµР»РµРЅРёРµ РїР°РјСЏС‚Рё Рё РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РґР°РЅРЅС‹С…
+		cudaMalloc((void**)&data->deviceIdeal, data->inputSizeTotal); //РњР°СЃСЃРёРІ РёРґРµР°Р»СЊРЅС‹С… Р·РЅР°С‡РµРЅРёР№
+		cudaMalloc((void**)&data->deviceResult, data->resultSizeTotal); //РњР°СЃСЃРёРІ РІС…РѕРґРЅС‹С… РґР°РЅРЅС‹С…
+		cudaMalloc((void**)&data->deviceWeights, data->weightsSizeTotal); //РњР°СЃСЃРёРІ РІСЃРµС… РІРµСЃРѕРІ
+		cudaMalloc((void**)&data->deltas, data->neuronsSizeTotal); //РњР°СЃСЃРёРІ РІСЃРµС… РІРµСЃРѕРІ
 		cudaMalloc((void**)&data->deltasBuffer, data->neuronsSizeTotal);
-		cudaMalloc((void**)&data->prevDeltas, data->weightsSizeTotal); //Массив всех весов
-		cudaMalloc((void**)&data->deviceNeuronOutputs, data->neuronsSizeTotal); //Входные данные следующего слоя
-		cudaMalloc((void**)&data->layerBufferA, data->maxVectorSizeTotal); //Входные данные следующего слоя
-		cudaMalloc((void**)&data->layerBufferB, data->maxVectorSizeTotal); //Входные данные следующего слоя
-		cudaMalloc((void**)&data->layerBufferC, data->maxVectorSizeTotal); //Входные данные следующего слоя
+		cudaMalloc((void**)&data->prevDeltas, data->weightsSizeTotal); //РњР°СЃСЃРёРІ РІСЃРµС… РІРµСЃРѕРІ
+		cudaMalloc((void**)&data->deviceNeuronOutputs, data->neuronsSizeTotal); //Р’С…РѕРґРЅС‹Рµ РґР°РЅРЅС‹Рµ СЃР»РµРґСѓСЋС‰РµРіРѕ СЃР»РѕСЏ
+		cudaMalloc((void**)&data->layerBufferA, data->maxVectorSizeTotal); //Р’С…РѕРґРЅС‹Рµ РґР°РЅРЅС‹Рµ СЃР»РµРґСѓСЋС‰РµРіРѕ СЃР»РѕСЏ
+		cudaMalloc((void**)&data->layerBufferB, data->maxVectorSizeTotal); //Р’С…РѕРґРЅС‹Рµ РґР°РЅРЅС‹Рµ СЃР»РµРґСѓСЋС‰РµРіРѕ СЃР»РѕСЏ
+		cudaMalloc((void**)&data->layerBufferC, data->maxVectorSizeTotal); //Р’С…РѕРґРЅС‹Рµ РґР°РЅРЅС‹Рµ СЃР»РµРґСѓСЋС‰РµРіРѕ СЃР»РѕСЏ
 
 		cudaMalloc((void**)&data->weightBufferA, maxLayerWeight);
 		cudaMalloc((void**)&data->weightBufferB, maxLayerWeight);
@@ -514,14 +514,14 @@ extern "C"
 	{
 		cudaMemcpy(data.deviceNeuronOutputs, input, data.inputSizeTotal, cudaMemcpyHostToDevice);
 
-		//Устанавливаем позицию в массиве весов
+		//РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј РїРѕР·РёС†РёСЋ РІ РјР°СЃСЃРёРІРµ РІРµСЃРѕРІ
 		int weightPosition = 0;
 		int neuronsPosition = data.neuronsPerLayer[0] + 1;
 
 		float* inputPtr = &data.deviceNeuronOutputs[0];
 		for (int layer = 0; layer < (data.layerCount - 1); layer++)
 		{
-			//Умножаем матрицу весов на вектор входных значений слоя
+			//РЈРјРЅРѕР¶Р°РµРј РјР°С‚СЂРёС†Сѓ РІРµСЃРѕРІ РЅР° РІРµРєС‚РѕСЂ РІС…РѕРґРЅС‹С… Р·РЅР°С‡РµРЅРёР№ СЃР»РѕСЏ
 			MultiplyAndActivateCublas(
 				data.neuronsPerLayer[layer + 1],
 				data.neuronsPerLayer[layer] + 1,
@@ -530,10 +530,10 @@ extern "C"
 				&data.deviceNeuronOutputs[neuronsPosition],
 				data.handler);
 
-			//Свапаем указатели
+			//РЎРІР°РїР°РµРј СѓРєР°Р·Р°С‚РµР»Рё
 			inputPtr = &data.deviceNeuronOutputs[neuronsPosition];
 
-			//Обновляем положение в массиве весов
+			//РћР±РЅРѕРІР»СЏРµРј РїРѕР»РѕР¶РµРЅРёРµ РІ РјР°СЃСЃРёРІРµ РІРµСЃРѕРІ
 			weightPosition += (data.neuronsPerLayer[layer] + 1) * data.neuronsPerLayer[layer + 1];
 			neuronsPosition += data.neuronsPerLayer[layer + 1] + 1;
 		}
