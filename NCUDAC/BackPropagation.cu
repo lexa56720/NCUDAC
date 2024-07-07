@@ -143,7 +143,7 @@ extern "C"
 
 	__global__ void MultiplyScalarKernel(float* result, float* matrix, float scalar, int count)
 	{
-		int threadIndex = threadIdx.x + blockDim.x * threadIdx.y;
+		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 		if (threadIndex < count)
 		{
 			result[threadIndex] = matrix[threadIndex] * scalar;
@@ -163,7 +163,7 @@ extern "C"
 
 	__global__ void ActivateKernel(float* matrix, int count)
 	{
-		int threadIndex = threadIdx.x + blockDim.x * threadIdx.y;
+		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 		if (threadIndex < count)
 		{
 			matrix[threadIndex] = 1.0 / (1.0 + expf(-matrix[threadIndex]));
@@ -190,7 +190,7 @@ extern "C"
 
 	__global__ void SubstractKernel(float* a, float* b, float* result, int count)
 	{
-		int threadIndex = threadIdx.x + blockDim.x * threadIdx.y;
+		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 		if (threadIndex < count)
 		{
 			result[threadIndex] = a[threadIndex] - b[threadIndex];
@@ -208,7 +208,7 @@ extern "C"
 
 	__global__ void AddKernel(float* a, float* b, float* result, int count)
 	{
-		int threadIndex = threadIdx.x + blockDim.x * threadIdx.y;
+		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 		if (threadIndex < count)
 		{
 			result[threadIndex] = a[threadIndex] + b[threadIndex];
@@ -226,7 +226,7 @@ extern "C"
 
 	__global__ void DeActivateKernel(float* neuronsOutput, float* result, int count)
 	{
-		int threadIndex = threadIdx.x + blockDim.x * threadIdx.y;
+		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 		if (threadIndex < count)
 		{
 			result[threadIndex] = (1 - neuronsOutput[threadIndex]) * neuronsOutput[threadIndex];
@@ -244,7 +244,7 @@ extern "C"
 
 	__global__ void HadamardProductKernel(float* a, float* b, float* result, int count)
 	{
-		int threadIndex = threadIdx.x + blockDim.x * threadIdx.y;
+		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 		if (threadIndex < count)
 		{
 			result[threadIndex] = a[threadIndex] * b[threadIndex];
@@ -263,7 +263,7 @@ extern "C"
 
 	__global__ void TransposeKernel(float* matrix, int rows, int columns, int count, float* result)
 	{
-		int threadIndex = threadIdx.x + blockDim.x * threadIdx.y;
+		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 		if (threadIndex < count)
 		{
 			int row = (int)(threadIndex / columns);
@@ -285,7 +285,7 @@ extern "C"
 
 	__global__ void MemsetKernel(float* array, float value, int count)
 	{
-		int threadIndex = threadIdx.x + blockDim.x * threadIdx.y;
+		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 		if (threadIndex < count)
 		{
 			array[threadIndex] = value;
@@ -304,7 +304,7 @@ extern "C"
 
 	__global__ void SumToSingleColumnKernel(float* matrix, int columns, int rows, float* result)
 	{
-		int threadIndex = threadIdx.x + blockDim.x * threadIdx.y;
+		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 
 		if (threadIndex < rows)
 		{
