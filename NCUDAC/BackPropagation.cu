@@ -1,5 +1,4 @@
-﻿
-#include "cuda_runtime.h"
+﻿#include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <stdio.h>
 #include <cublas_v2.h>
@@ -12,6 +11,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+
 void printMatrixCuda(float* matrix, int rows, int columns)
 {
 	float* array = (float*)malloc(rows * columns * 4);
@@ -35,7 +35,6 @@ void GetThreadAndBlocks(int count, int* threads, int* blocks)
 	if (*threads > 1024)
 		*threads = 1024;
 }
-
 
 void MultiplyCuda(int rowsA, int columnsA, int columnsB, float* matrixA, float* matrixB, float* result, cublasOperation_t OpA, cublasOperation_t OpB, float scalar, cublasHandle_t handle)
 {
@@ -64,22 +63,16 @@ extern "C"
 		float speed;
 		float momentum;
 
-
 		float* deviceResult;
 		float* deviceNeuronOutputs;
 		float* deviceWeights;
 		float* deviceIdeal;
 
-
 		float* prevDeltas;
 		float* deltas;
 
-		float* deltasBuffer;
-		float* weightBufferA;
-		float* weightBufferB;
-		float* layerBufferA;
-		float* layerBufferB;
-		float* layerBufferC;
+		float* weightBuffer;
+		float* layerBuffer;
 
 		int maxVectorSizeTotal;
 		int weightsSizeTotal;
@@ -140,27 +133,25 @@ extern "C"
 			sum += array[i];
 		return sum;
 	}
-
-	__global__ void MultiplyScalarKernel(float* result, float* matrix, float scalar, int count)
+	__global__ void ApplyDeltasKernel(float* prevDeltas, float momentum, float* weights, float* result, int count )
 	{
 		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 		if (threadIndex < count)
 		{
-			result[threadIndex] = matrix[threadIndex] * scalar;
+			prevDeltas[threadIndex] = weights[threadIndex] + prevDeltas[threadIndex] * momentum;
+			result[threadIndex] = result[threadIndex] + prevDeltas[threadIndex];
 		}
-
 	}
-	void MultiplyScalarCuda(float* matrix, float scalar, int rows, int columns, float* result)
+
+	void ApplyDeltasCuda(float* prevDeltas, float momentum, float* weights,float* result, int count)
 	{
-		int count = rows * columns;
 		int blocks, threads;
 		GetThreadAndBlocks(count, &threads, &blocks);
-		MultiplyScalarKernel << <blocks, threads >> > (result, matrix, scalar, count);
+		ApplyDeltasKernel << <blocks, threads >> > (prevDeltas, momentum, weights, result, count);
 
 		// Ожидание конца вычислений
 		cudaDeviceSynchronize();
 	}
-
 	__global__ void ActivateKernel(float* matrix, int count)
 	{
 		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
@@ -188,100 +179,45 @@ extern "C"
 		cudaDeviceSynchronize();
 	}
 
-	__global__ void SubstractKernel(float* a, float* b, float* result, int count)
+	__global__ void SubDeActHadmandKernel(float* ideal, float* output, float* result, int count)
 	{
 		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 		if (threadIndex < count)
 		{
-			result[threadIndex] = a[threadIndex] - b[threadIndex];
+			result[threadIndex] = (ideal[threadIndex] - output[threadIndex]) * ((1 - output[threadIndex]) * output[threadIndex]);
 		}
 	}
-	void SubstractCuda(float* a, float* b, float* result, int count)
+
+	void SubDeActHadmandCuda(float* ideal, float* output, float* result, int count)
 	{
 		int blocks, threads;
 		GetThreadAndBlocks(count, &threads, &blocks);
-		SubstractKernel << <blocks, threads >> > (a, b, result, count);
+		SubDeActHadmandKernel << <blocks, threads >> > (ideal, output, result, count);
 
 		// Ожидание конца вычислений
 		cudaDeviceSynchronize();
 	}
 
-	__global__ void AddKernel(float* a, float* b, float* result, int count)
+
+	__global__ void DeActivateAndHadamardKernel(float* neuronsOutput, float* layer, float* result, int count)
 	{
 		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
 		if (threadIndex < count)
 		{
-			result[threadIndex] = a[threadIndex] + b[threadIndex];
+			result[threadIndex] = (1 - neuronsOutput[threadIndex]) * neuronsOutput[threadIndex] * layer[threadIndex];
 		}
 	}
-	void AddCuda(float* a, float* b, float* result, int count)
+
+	void DeActivateAndHadamardCuda(float* neuronsOutput,float* layer, float* result, int count)
 	{
 		int blocks, threads;
 		GetThreadAndBlocks(count, &threads, &blocks);
-		AddKernel << <blocks, threads >> > (a, b, result, count);
+		DeActivateAndHadamardKernel << <blocks, threads >> > (neuronsOutput,  layer, result, count);
 
 		// Ожидание конца вычислений
 		cudaDeviceSynchronize();
 	}
 
-	__global__ void DeActivateKernel(float* neuronsOutput, float* result, int count)
-	{
-		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
-		if (threadIndex < count)
-		{
-			result[threadIndex] = (1 - neuronsOutput[threadIndex]) * neuronsOutput[threadIndex];
-		}
-	}
-	void DeActivateCuda(float* neuronsOutput, float* result, int count)
-	{
-		int blocks, threads;
-		GetThreadAndBlocks(count, &threads, &blocks);
-		DeActivateKernel << <blocks, threads >> > (neuronsOutput, result, count);
-
-		// Ожидание конца вычислений
-		cudaDeviceSynchronize();
-	}
-
-	__global__ void HadamardProductKernel(float* a, float* b, float* result, int count)
-	{
-		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
-		if (threadIndex < count)
-		{
-			result[threadIndex] = a[threadIndex] * b[threadIndex];
-		}
-	}
-	void HadamardProductCuda(float* a, float* b, float* result, int rows, int columns)
-	{
-		int count = rows * columns;
-		int blocks, threads;
-		GetThreadAndBlocks(count, &threads, &blocks);
-		HadamardProductKernel << <blocks, threads >> > (a, b, result, count);
-
-		// Ожидание конца вычислений
-		cudaDeviceSynchronize();
-	}
-
-	__global__ void TransposeKernel(float* matrix, int rows, int columns, int count, float* result)
-	{
-		int threadIndex = blockIdx.x * blockDim.x + threadIdx.x;
-		if (threadIndex < count)
-		{
-			int row = (int)(threadIndex / columns);
-			int column = threadIndex % columns;
-			result[threadIndex] = matrix[column * rows + row];
-		}
-	}
-	void TransposeCuda(float* matrix, int rows, int columns, float* result)
-	{
-		int count = rows * columns;
-		int blocks, threads;
-		GetThreadAndBlocks(count, &threads, &blocks);
-
-		TransposeKernel << <blocks, threads >> > (matrix, rows, columns, count, result);
-
-		// Ожидание конца вычислений
-		cudaDeviceSynchronize();
-	}
 
 	__global__ void MemsetKernel(float* array, float value, int count)
 	{
@@ -366,16 +302,11 @@ extern "C"
 		cudaMalloc((void**)&data->deviceResult, data->resultSizeTotal); //Массив входных данных
 		cudaMalloc((void**)&data->deviceWeights, data->weightsSizeTotal); //Массив всех весов
 		cudaMalloc((void**)&data->deltas, data->neuronsSizeTotal); //Массив всех весов
-		cudaMalloc((void**)&data->deltasBuffer, data->neuronsSizeTotal);
 		cudaMalloc((void**)&data->prevDeltas, data->weightsSizeTotal); //Массив всех весов
 		cudaMalloc((void**)&data->deviceNeuronOutputs, data->neuronsSizeTotal); //Входные данные следующего слоя
-		cudaMalloc((void**)&data->layerBufferA, data->maxVectorSizeTotal); //Входные данные следующего слоя
-		cudaMalloc((void**)&data->layerBufferB, data->maxVectorSizeTotal); //Входные данные следующего слоя
-		cudaMalloc((void**)&data->layerBufferC, data->maxVectorSizeTotal); //Входные данные следующего слоя
+		cudaMalloc((void**)&data->layerBuffer, data->maxVectorSizeTotal); //Входные данные следующего слоя
 
-		cudaMalloc((void**)&data->weightBufferA, maxLayerWeight);
-		cudaMalloc((void**)&data->weightBufferB, maxLayerWeight);
-
+		cudaMalloc((void**)&data->weightBuffer, maxLayerWeight);
 
 		MemsetCuda(data->deltas, 0, data->neuronsSizeTotal / sizeof(float));
 		MemsetCuda(data->prevDeltas, 0, data->neuronsSizeTotal / sizeof(float));
@@ -402,36 +333,19 @@ extern "C"
 				data->neuronsPerLayer[layer - 1] + 1,
 				&data->deltas[neuronsPosition],
 				&data->deviceNeuronOutputs[prevNeronsPosition],
-				data->weightBufferA,
+				data->weightBuffer,
 				CUBLAS_OP_N,
 				CUBLAS_OP_N,
 				data->speed,
 				data->handler
 			);
 
-
-			MultiplyScalarCuda(
+			ApplyDeltasCuda(
 				&data->prevDeltas[weightPosition],
 				data->momentum,
-				data->neuronsPerLayer[layer],
-				data->neuronsPerLayer[layer - 1] + 1,
-				data->weightBufferB
-			);
-
-			AddCuda
-			(
-				data->weightBufferA,
-				data->weightBufferB,
-				&data->prevDeltas[weightPosition],
-				data->neuronsPerLayer[layer] * (data->neuronsPerLayer[layer - 1] + 1)
-			);
-
-			AddCuda(
+				data->weightBuffer,
 				&data->deviceWeights[weightPosition],
-				&data->prevDeltas[weightPosition],
-				&data->deviceWeights[weightPosition],
-				(data->neuronsPerLayer[layer]) * (data->neuronsPerLayer[layer - 1] + 1)
-			);
+				data->neuronsPerLayer[layer] * (data->neuronsPerLayer[layer - 1] + 1));
 
 			prevNeronsPosition = neuronsPosition;
 			weightPosition += (data->neuronsPerLayer[layer - 1] + 1) * data->neuronsPerLayer[layer];
@@ -444,39 +358,20 @@ extern "C"
 		int neuronsOnLastLayer = data->neuronsPerLayer[data->layerCount - 1];
 		int neuronsOnPreLastLayer = data->neuronsPerLayer[data->layerCount - 2] + 1;
 
-
 		weightPosition -= neuronsOnPreLastLayer * neuronsOnLastLayer;
 		neuronPosition -= neuronsOnLastLayer;
 
-		SubstractCuda(
+
+		SubDeActHadmandCuda(
 			data->deviceIdeal,
 			&data->deviceNeuronOutputs[neuronPosition],
-			data->layerBufferB,
-			neuronsOnLastLayer);
-
-
-		DeActivateCuda(
-			&data->deviceNeuronOutputs[neuronPosition],
-			data->layerBufferA,
-			neuronsOnLastLayer);
-
-
-		HadamardProductCuda(
-			data->layerBufferB,
-			data->layerBufferA,
 			&data->deltas[neuronPosition],
-			neuronsOnLastLayer,
-			1
-		);
+			neuronsOnLastLayer);
 
 		neuronPosition -= neuronsOnPreLastLayer;
 
 		for (int layer = (data->layerCount - 2); layer > 0; layer--)
 		{
-			DeActivateCuda(
-				&data->deviceNeuronOutputs[neuronPosition],
-				data->layerBufferA,
-				data->neuronsPerLayer[layer]);
 
 			MultiplyCuda(
 				data->neuronsPerLayer[layer] + 1,
@@ -484,18 +379,16 @@ extern "C"
 				1,
 				&data->deviceWeights[weightPosition],
 				&data->deltas[neuronPosition + data->neuronsPerLayer[layer] + 1],
-				data->layerBufferB,
+				data->layerBuffer,
 				CUBLAS_OP_N,
 				CUBLAS_OP_N,
 				1,
 				data->handler);
 
-			HadamardProductCuda(
-				data->layerBufferB,
-				data->layerBufferA,
+			DeActivateAndHadamardCuda(&data->deviceNeuronOutputs[neuronPosition],
+				data->layerBuffer,
 				&data->deltas[neuronPosition],
-				data->neuronsPerLayer[layer] + 1,
-				1);
+				data->neuronsPerLayer[layer]);
 
 			neuronPosition -= (data->neuronsPerLayer[layer] + 1);
 			weightPosition -= data->neuronsPerLayer[layer + 1] * data->neuronsPerLayer[layer] + 1;
@@ -547,24 +440,6 @@ extern "C"
 	}
 
 
-	__declspec(dllexport) void CudaExecuteAndLearnBatch(float* inputs, float* ideals, int* batchSize, float* result, struct CudaData data)
-	{
-
-		int neuronsOnLastLayer = data.neuronsPerLayer[data.layerCount - 1];
-
-		MemsetCuda(data.deltasBuffer, 0.0f, data.neuronsSizeTotal / sizeof(float));
-		for (int i = 0; i < *batchSize; i++)
-		{
-			cudaMemcpy(data.deviceIdeal, &ideals[i * neuronsOnLastLayer], data.resultSizeTotal, cudaMemcpyHostToDevice);
-			CudaExecute(&inputs[i * data.neuronsPerLayer[0]], &result[i * neuronsOnLastLayer], data);
-			ComputeDeltas(&data, data.weightsSizeTotal / sizeof(float), data.neuronsSizeTotal / sizeof(float));
-
-			AddCuda(data.deltasBuffer, data.deltas, data.deltasBuffer, data.neuronsSizeTotal / sizeof(float));
-		}
-		MultiplyScalarCuda(data.deltasBuffer, 1.0f / (*batchSize), data.neuronsSizeTotal / sizeof(float), 1, data.deltas);
-		UpdateWeights(&data);
-	}
-
 	__declspec(dllexport) void CudaExecuteAndLearn(float* input, float* ideal, float* result, struct CudaData data)
 	{
 		cudaMemcpy(data.deviceIdeal, ideal, data.resultSizeTotal, cudaMemcpyHostToDevice);
@@ -585,14 +460,10 @@ extern "C"
 		cudaFree(data.deviceIdeal);
 		cudaFree(data.deviceWeights);
 		cudaFree(data.deviceResult);
-		cudaFree(data.layerBufferA);
-		cudaFree(data.layerBufferB);
-		cudaFree(data.layerBufferC);
+		cudaFree(data.layerBuffer);
 		cudaFree(data.deltas);
 		cudaFree(data.prevDeltas);
-		cudaFree(data.weightBufferA);
-		cudaFree(data.weightBufferB);
+		cudaFree(data.weightBuffer);
 		cudaFree(data.deviceNeuronOutputs);
-		cudaFree(data.deltasBuffer);
 	}
 }
